@@ -14,7 +14,7 @@ class RestauranteApp:
         self.root = tk.Tk()
         self.root.title("Restaurante App - tkinter")
         self.root.geometry("900x650")
-        self.root.minsize(600, 550)
+        self.root.minsize(700, 550)
 
         # Prepara los servicios que usara en la vista principal y en el login.
         ruta_base = Path(__file__).resolve().parent
