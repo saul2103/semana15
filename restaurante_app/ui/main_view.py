@@ -1,6 +1,9 @@
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, filedialog
+from datetime import datetime
+
+from servicios.reporte_servicio import ReporteServicio
 
 
 
@@ -30,6 +33,9 @@ class MainView(tk.Frame):
         self.tabla_ventas = None
         self.opciones_usuarios_venta = {}
         self.opciones_productos_venta = {}
+
+        ruta_logo = Path(__file__).resolve().parent.parent / "assets" / "logo" / "restaurante.png"
+        self.reporte_servicio = ReporteServicio(ruta_logo)
 
         self.definir_estilos()
         self.construir_interfaz()
@@ -168,6 +174,8 @@ class MainView(tk.Frame):
 
         tk.Frame(frame_sidebar, bg=self.color_encabezado).pack(fill="both", expand=True)
 
+
+
         self.crear_boton(
             frame_sidebar,
             "Cerrar sesion",
@@ -226,6 +234,7 @@ class MainView(tk.Frame):
                 "Datos JSON locales"
             )
         )
+
 
 
     def mostrar_inicio(self):
@@ -291,7 +300,7 @@ class MainView(tk.Frame):
 
         assert self.contenido is not None
 
-        self.crear_titulo_seccion("Productos registrados")
+        self.crear_titulo_seccion("Productos")
 
         cuerpo = tk.Frame(self.contenido, bg=self.color_fondo)
         cuerpo.pack(fill="both", expand=True)
@@ -457,6 +466,8 @@ class MainView(tk.Frame):
 
             assert self.contenido is not None
 
+            self.crear_titulo_seccion("Ventas")
+
             cuerpo = tk.Frame(self.contenido, bg=self.color_fondo)
             cuerpo.pack(fill="both", expand=True)
             cuerpo.grid_columnconfigure(0, weight=0)
@@ -499,6 +510,16 @@ class MainView(tk.Frame):
                 "Accion.TButton",
                 "add.png",
             ).pack(fill="x")
+
+            # crea boton para la generacion pdf
+            self.crear_boton(
+                acciones,
+                "Generar Reporte PDF",
+                self.generar_reporte_ventas,
+                "Secundario.TButton",
+                "pdf.png",
+            ).pack(fill="x")
+
 
             listado = self.crear_listado(cuerpo, "Ventas registradas", usar_grid=True)
             self.tabla_ventas = self.crear_tabla(
@@ -567,6 +588,42 @@ class MainView(tk.Frame):
             messagebox.showinfo("Ventas", "Venta registrada correctamente.")
         except ValueError as error:
             messagebox.showerror("Ventas", str(error))
+
+
+    def generar_reporte_ventas(self):
+        ventas = self.restaurante_servicio.listar_ventas()
+        if not ventas:
+            messagebox.showinfo("Ventas", "No existen ventas registradas para generar el reporte.")
+            return
+
+        nombre_archivo = datetime.now().strftime("reporte_ventas_%Y%m%d_%H%M.pdf")
+        ruta_salida = filedialog.asksaveasfilename(
+            title="Guardar reporte de ventas",
+            defaultextension=".pdf",
+            filetypes=(("Archivos PDF", "*.pdf"),),
+            initialfile=nombre_archivo,
+        )
+
+        if not ruta_salida:
+            return
+
+        try:
+            # La interfaz solicita la ruta; el servicio construye el PDF.
+            ruta_generada = self.reporte_servicio.generar_reporte_ventas(
+                ruta_salida,
+                ventas,
+                self.restaurante_servicio.listar_usuarios(),
+                self.restaurante_servicio.listar_productos(),
+            )
+            messagebox.showinfo("Ventas", f"Reporte generado correctamente.\n{ruta_generada}")
+        except ImportError:
+            messagebox.showerror(
+                "Ventas",
+                "No fue posible generar el reporte. Instale ReportLab con: pip install reportlab",
+            )
+        except Exception:
+            messagebox.showerror("Ventas", "No fue posible generar el reporte.")
+
 
     def limpiar_formulario_venta(self):
         assert self.usuario_venta_combo is not None
